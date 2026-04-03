@@ -149,6 +149,36 @@ test("PATCH /notes/:id updates title and content and refreshes updatedAt", async
   }
 });
 
+test("PATCH /notes/:id with only content preserves title and createdAt", async () => {
+  const fixture = await createTestApp([
+    {
+      id: "content-only",
+      title: "Keep title",
+      content: "Old content",
+      createdAt: "2026-04-01T10:00:00.000Z",
+      updatedAt: "2026-04-01T10:00:00.000Z",
+    },
+  ]);
+
+  try {
+    const response = await request(fixture.app)
+      .patch("/notes/content-only")
+      .send({ content: "New content only" });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.title, "Keep title");
+    assert.equal(response.body.content, "New content only");
+    assert.equal(response.body.createdAt, "2026-04-01T10:00:00.000Z");
+    assert.notEqual(response.body.updatedAt, "2026-04-01T10:00:00.000Z");
+
+    const listResponse = await request(fixture.app).get("/notes");
+    assert.equal(listResponse.body[0].title, "Keep title");
+    assert.equal(listResponse.body[0].content, "New content only");
+    assert.equal(listResponse.body[0].createdAt, "2026-04-01T10:00:00.000Z");
+  } finally {
+    await fixture.cleanup();
+  }
+});
 test("PATCH /notes/:id rejects empty payloads and unknown fields", async () => {
   const fixture = await createTestApp([
     {
