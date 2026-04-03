@@ -1,11 +1,7 @@
 (function bootstrapNotesApp(windowObject, documentObject) {
-  const state = {
-    notes: [],
-    isLoaded: false,
-    isLoading: false,
-    activeEditId: null,
-    globalError: "",
-  };
+  const engine = windowObject.createNotesWorkflowEngine({
+    api: windowObject.notesApi,
+  });
 
   const elements = {
     createForm: documentObject.getElementById("create-form"),
@@ -20,9 +16,11 @@
     notesList: documentObject.getElementById("notes-list"),
   };
 
+  engine.subscribe(render);
+
   elements.createForm.addEventListener("submit", handleCreateSubmit);
   elements.retryButton.addEventListener("click", () => {
-    loadNotes();
+    engine.retryLoad();
   });
 
   elements.notesList.addEventListener("click", async (event) => {
@@ -39,33 +37,19 @@
     const noteId = listItem.dataset.noteId;
 
     if (action.dataset.action === "edit") {
-      state.activeEditId = noteId;
-      render();
+      engine.beginEdit(noteId);
       return;
     }
 
     if (action.dataset.action === "cancel") {
-      state.activeEditId = null;
-      render();
+      engine.cancelEdit();
       return;
     }
 
     if (action.dataset.action === "delete") {
-      if (!windowObject.confirm("Delete this note?")) {
-        return;
-      }
-
-      try {
-        clearGlobalError();
-        await windowObject.notesApi.deleteNote(noteId);
-        state.notes = state.notes.filter((note) => note.id !== noteId);
-        if (state.activeEditId === noteId) {
-          state.activeEditId = null;
-        }
-        render();
-      } catch (error) {
-        setGlobalError(error.message);
-      }
+      await engine.deleteNote(noteId, {
+        confirm: () => windowObject.confirm("Delete this note?"),
+      });
     }
   });
 
@@ -78,68 +62,29 @@
     event.preventDefault();
 
     const noteId = form.dataset.noteId;
-    const title = form.elements.title.value;
-    const content = form.elements.content.value;
-    const errorElement = form.querySelector(".inline-error");
-
-    hideInlineError(errorElement);
-
-    try {
-      const updatedNote = await windowObject.notesApi.updateNote(noteId, {
-        title,
-        content,
-      });
-      state.notes = state.notes.map((note) =>
-        note.id === noteId ? updatedNote : note,
-      );
-      state.activeEditId = null;
-      render();
-    } catch (error) {
-      showInlineError(errorElement, error.message);
-    }
+    await engine.saveEdit(noteId, {
+      title: form.elements.title.value,
+      content: form.elements.content.value,
+    });
   });
 
-  loadNotes();
-
-  async function loadNotes() {
-    state.isLoading = true;
-    state.globalError = "";
-    render();
-
-    try {
-      state.notes = await windowObject.notesApi.listNotes();
-      state.isLoaded = true;
-      state.activeEditId = null;
-    } catch (error) {
-      state.isLoaded = false;
-      setGlobalError("Could not load notes. Try again.");
-    } finally {
-      state.isLoading = false;
-      render();
-    }
-  }
+  engine.load();
 
   async function handleCreateSubmit(event) {
     event.preventDefault();
-    hideInlineError(elements.createError);
 
-    try {
-      const note = await windowObject.notesApi.createNote({
-        title: elements.createTitle.value,
-        content: elements.createContent.value,
-      });
+    const note = await engine.createNote({
+      title: elements.createTitle.value,
+      content: elements.createContent.value,
+    });
 
-      state.notes = [note, ...state.notes];
-      state.isLoaded = true;
+    if (note) {
       elements.createForm.reset();
       elements.createTitle.focus();
-      render();
-    } catch (error) {
-      showInlineError(elements.createError, error.message);
     }
   }
 
-  function render() {
+  function render(state) {
     elements.createSubmit.disabled = !state.isLoaded || state.isLoading;
     elements.createTitle.disabled = !state.isLoaded || state.isLoading;
     elements.createContent.disabled = !state.isLoaded || state.isLoading;
@@ -155,9 +100,13 @@
     );
     toggleHidden(elements.notesList, !state.isLoaded || state.notes.length === 0);
 
+    syncInlineError(elements.createError, state.createError);
+
     elements.notesList.innerHTML = state.notes
       .map((note) =>
-        note.id === state.activeEditId ? renderEditNote(note) : renderReadNote(note),
+        note.id === state.activeEditId
+          ? renderEditNote(note, state.editError)
+          : renderReadNote(note),
       )
       .join("");
   }
@@ -180,7 +129,7 @@
     `;
   }
 
-  function renderEditNote(note) {
+  function renderEditNote(note, editError) {
     return `
       <li class="note-card note-card-editing" data-note-id="${escapeHtml(note.id)}">
         <form class="edit-form" data-note-id="${escapeHtml(note.id)}" novalidate>
@@ -192,7 +141,7 @@
             <span>Content</span>
             <textarea name="content" maxlength="2000" rows="6">${escapeHtml(note.content || "")}</textarea>
           </label>
-          <p class="inline-error hidden" role="alert"></p>
+          <p class="inline-error ${editError ? "" : "hidden"}" role="alert">${escapeHtml(editError || "")}</p>
           <div class="card-actions">
             <button type="submit">Save</button>
             <button data-action="cancel" class="button-secondary" type="button">Cancel</button>
@@ -215,24 +164,9 @@
     return new Date(value).toLocaleString();
   }
 
-  function setGlobalError(message) {
-    state.globalError = message;
-    render();
-  }
-
-  function clearGlobalError() {
-    state.globalError = "";
-    render();
-  }
-
-  function showInlineError(element, message) {
+  function syncInlineError(element, message) {
     element.textContent = message;
-    element.classList.remove("hidden");
-  }
-
-  function hideInlineError(element) {
-    element.textContent = "";
-    element.classList.add("hidden");
+    element.classList.toggle("hidden", !message);
   }
 
   function toggleHidden(element, shouldHide) {
