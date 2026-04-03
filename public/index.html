@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes Desk</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Local Notes</p>
+        <h1>Keep your notes close and editable.</h1>
+        <p class="hero-copy">
+          Create quick notes, update them inline, and trim the list down when
+          you're done.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="panel panel-accent">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Create</p>
+              <h2>New note</h2>
+            </div>
+            <p class="helper-text">Title up to 50 chars, content up to 2000.</p>
+          </div>
+
+          <div
+            id="global-error"
+            class="banner banner-error hidden"
+            role="alert"
+          ></div>
+
+          <form id="create-form" class="note-form" novalidate>
+            <label class="field">
+              <span>Title</span>
+              <input id="create-title" name="title" maxlength="50" required />
+            </label>
+
+            <label class="field">
+              <span>Content</span>
+              <textarea
+                id="create-content"
+                name="content"
+                maxlength="2000"
+                rows="6"
+              ></textarea>
+            </label>
+
+            <p id="create-error" class="inline-error hidden" role="alert"></p>
+
+            <div class="form-actions">
+              <button id="create-submit" type="submit">Save note</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="section-kicker">Library</p>
+              <h2>Your notes</h2>
+            </div>
+            <button id="retry-button" class="button-secondary hidden" type="button">
+              Retry load
+            </button>
+          </div>
+
+          <div id="loading-state" class="stack">
+            <p class="muted">Loading notes...</p>
+          </div>
+
+          <div id="empty-state" class="empty-state hidden">
+            <h3>No notes yet</h3>
+            <p>Start with the form above to create your first note.</p>
+          </div>
+
+          <ul id="notes-list" class="notes-list hidden"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="/api-client.js"></script>
+    <script src="/main.js"></script>
+  </body>
+</html>

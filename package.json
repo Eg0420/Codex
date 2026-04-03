@@ -1,0 +1,27 @@
+{
+  "name": "codex",
+  "version": "1.0.0",
+  "description": "Small file-backed notes API built with Express.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Eg0420/Codex.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Eg0420/Codex/issues"
+  },
+  "homepage": "https://github.com/Eg0420/Codex#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "supertest": "^7.2.2"
+  }
+}
